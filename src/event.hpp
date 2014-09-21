@@ -52,7 +52,7 @@ struct event_type_base {
 
 template<typename EventType>
 struct event_type_check {
-	static_assert(std::is_constructible<event_type_base*, EventType*>::value,
+	static_assert(std::is_base_of<event_type_base, EventType>::value,
 		"Event types must be derived from slirc::event::type!");
 	static_assert(!std::is_same<event_type_base, EventType>::value,
 		"slirc::event::type is not a valid event type. "

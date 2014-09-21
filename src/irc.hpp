@@ -80,7 +80,7 @@ private:
 
 public:
 	/**
-	 * Create an empty IRC context.
+	 * \brief Creates an empty IRC context.
 	 */
 	irc();
 
@@ -150,7 +150,7 @@ public:
 	 */
 	template<typename Module>
 	Module &module() {
-		static_assert(std::is_constructible<slirc::module*, Module*>::value,
+		static_assert(std::is_base_of<slirc::module, Module>::value,
 			"The passed argument is not derived from slirc::module!");
 
 		Module *module;
@@ -181,7 +181,7 @@ public:
 	 */
 	template<typename Module>
 	void unload() {
-		static_assert(std::is_constructible<slirc::module*, Module*>::value,
+		static_assert(std::is_base_of<slirc::module, Module>::value,
 			"The passed argument is not derived from slirc::module!");
 
 		module_container_t::iterator it = modules.find(typeid(typename Module::module_api_type));
@@ -205,7 +205,7 @@ public:
 	 */
 	template<typename Module, typename... Params>
 	Module &load(Params&&... params) {
-		static_assert(std::is_constructible<slirc::module*, Module*>::value,
+		static_assert(std::is_base_of<slirc::module, Module>::value,
 			"The passed argument is not derived from slirc::module!");
 
 		try {
