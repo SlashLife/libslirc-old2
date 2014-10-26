@@ -53,6 +53,7 @@
 		</Linker>
 		<Unit filename="src/apis.hpp" />
 		<Unit filename="src/apis/connection.hpp" />
+		<Unit filename="src/apis/protocol.cpp" />
 		<Unit filename="src/apis/protocol.hpp" />
 		<Unit filename="src/event.hpp" />
 		<Unit filename="src/exceptions.hpp" />
@@ -67,6 +68,7 @@
 		<Unit filename="src/module_api.hpp" />
 		<Unit filename="src/modules.hpp" />
 		<Unit filename="src/modules/client_to_server.cpp" />
+		<Unit filename="src/modules/client_to_server.hpp" />
 		<Unit filename="src/modules/connection.cpp" />
 		<Unit filename="src/modules/connection.hpp" />
 		<Unit filename="src/network.cpp" />

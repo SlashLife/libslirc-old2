@@ -20,45 +20,24 @@
 **  If not, see <http://www.gnu.org/licenses/>.                           **
 ***************************************************************************/
 
-#include "client_to_server.hpp"
+#ifndef LIBSLIRC_HDR_MODULES_CLIENT_TO_SERVER_HPP_INCLUDED
+#define LIBSLIRC_HDR_MODULES_CLIENT_TO_SERVER_HPP_INCLUDED
 
-#include "../apis/connection.hpp"
+#include "../apis/protocol.hpp"
+#include "../irc.hpp"
 
-#include <utility>
+namespace slirc {
+namespace modules {
 
-namespace arg = std::placeholders;
+struct client_to_server: apis::protocol {
+	client_to_server(slirc::irc &context);
+	~client_to_server();
+protected:
+	void parser(event::pointer);
+	irc::handler_connection_type parserconn;
+};
 
-slirc::modules::client_to_server::client_to_server(slirc::irc &context)
-: apis::protocol(context)
-, parserconn(context.attach<apis::connection::raw_irc_line_event>(
-	std::bind(&client_to_server::parser, this, arg::_1))) {
+}
 }
 
-slirc::modules::client_to_server::~client_to_server() {
-	parserconn.disconnect();
-}
-
-void slirc::modules::client_to_server::parser(event::pointer ep) {
-	const std::string &line = ep->data.get<apis::connection::raw_irc_line>().line;
-
-	parameters &prm = ep->data.set(parameters());
-		prm.params = irc_split(line);
-
-	if (prm.params.empty()) {
-		return;
-	}
-
-	if (
-		// !prm.params[0].empty() && // Check unnecessary: Only the last
-		//   parameter can be empty if it is the literal extended parameter ":"
-		//   The first parameter cannot be an extended parameter, though.
-		prm.params[0][0] == ':'
-	) {
-		origin &org = ep->data.set(origin());
-			org.origin_string = prm.params[0].substr(1);
-
-		;
-	}
-
-	ep->queue_as<parsed_event>();
-}
+#endif // LIBSLIRC_HDR_MODULES_CLIENT_TO_SERVER_HPP_INCLUDED

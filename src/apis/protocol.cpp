@@ -20,45 +20,25 @@
 **  If not, see <http://www.gnu.org/licenses/>.                           **
 ***************************************************************************/
 
-#include "client_to_server.hpp"
+#include "protocol.hpp"
 
-#include "../apis/connection.hpp"
+std::vector<std::string> slirc::apis::protocol::irc_split(const std::string &line) {
+	std::vector<std::string> params;
 
-#include <utility>
-
-namespace arg = std::placeholders;
-
-slirc::modules::client_to_server::client_to_server(slirc::irc &context)
-: apis::protocol(context)
-, parserconn(context.attach<apis::connection::raw_irc_line_event>(
-	std::bind(&client_to_server::parser, this, arg::_1))) {
-}
-
-slirc::modules::client_to_server::~client_to_server() {
-	parserconn.disconnect();
-}
-
-void slirc::modules::client_to_server::parser(event::pointer ep) {
-	const std::string &line = ep->data.get<apis::connection::raw_irc_line>().line;
-
-	parameters &prm = ep->data.set(parameters());
-		prm.params = irc_split(line);
-
-	if (prm.params.empty()) {
-		return;
+	std::string::size_type begin, end=0;
+	while(end != line.npos) {
+		begin = line.find_first_not_of(' ', end);
+		if (begin != line.npos) {
+			if (line[begin]==':' && !params.empty()) {
+				end = line.npos;
+				++begin;
+			}
+			else {
+				end = line.find_first_of(' ', begin);
+			}
+			params.emplace_back(line.substr(begin, end-begin));
+		}
 	}
 
-	if (
-		// !prm.params[0].empty() && // Check unnecessary: Only the last
-		//   parameter can be empty if it is the literal extended parameter ":"
-		//   The first parameter cannot be an extended parameter, though.
-		prm.params[0][0] == ':'
-	) {
-		origin &org = ep->data.set(origin());
-			org.origin_string = prm.params[0].substr(1);
-
-		;
-	}
-
-	ep->queue_as<parsed_event>();
+	return params;
 }
