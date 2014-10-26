@@ -60,14 +60,26 @@ struct event_type_check {
 	typedef EventType type;
 };
 
-template<typename EventType, typename Iterator>
-inline bool check_event_history(Iterator begin, Iterator end) {
+template<typename EventType>
+inline bool check_event_history(const std::type_index *begin, const std::type_index *end) {
 	return end != std::find(begin, end,
-		typeid(typename detail::event_type_check<EventType>::type));
+		std::type_index(typeid(typename detail::event_type_check<EventType>::type)));
 }
 
 } // namespace detail
 
+/**
+ * \brief The event class.
+ *
+ * An event is any action happening in an IRC context.
+ *
+ * Events are specified by their event type and the data attached to it.
+ * An event can change its type multiple times during its life.
+ *
+ * For example a raw network event may become a numeric_event after protocol
+ * parsing and then become a rpl_welcome_event after parsing the specific
+ * numeric.
+ */
 struct event {
 	friend class slirc::irc;
 
@@ -101,6 +113,8 @@ public:
 	/**
 	 * \brief Base class for event type identifiers with required tags.
 	 *
+	 * Enables runtime checks for the given tag types when handling the event
+	 * using
 	 * If you define your own events, inherit from this class to allow them to
 	 * be used as an event type and to enable runtime checks for required
 	 * data tags in debug mode.
@@ -109,7 +123,7 @@ public:
 	 *       instantiated.
 	 */
 	template<typename ...DataTags>
-	struct required_tags: type {
+	struct requires_tags: type {
 		/**
 		 * \brief The type holding the checking for this event type.
 		 */
@@ -126,6 +140,8 @@ public:
 	 *
 	 * \tparam EventType The initial type of this event. This must be a type
 	 *                   derived from (but not equal to) slirc::event::type
+	 *
+	 * \return Returns a pointer to the newly created event.
 	 */
 	template<typename EventType>
 	static pointer create() {
@@ -153,8 +169,7 @@ public:
 	 */
 	template<typename EventType>
 	bool queue_as(bool multiple = false) {
-		if (!multiple) {
-
+		if (!multiple && will_be_a<EventType>()) {
 			return false;
 		}
 
@@ -178,7 +193,7 @@ public:
 	template<typename EventType>
 	bool was_a() const {
 		return detail::check_event_history<EventType>(
-			event_type_history.begin(), current_type);
+			&*(event_type_history.begin()), &*current_type);
 	}
 
 	/**
@@ -193,7 +208,7 @@ public:
 	bool is_a() const {
 		return current_type != event_type_history.end() &&
 			detail::check_event_history<EventType>(
-				current_type, current_type + 1);
+				&*(current_type), &*(current_type+1));
 	}
 
 	/**
@@ -208,7 +223,7 @@ public:
 	bool will_be_a() const {
 		return current_type != event_type_history.end() &&
 			detail::check_event_history<EventType>(
-				current_type + 1, event_type_history.end());
+				&*(current_type+1), &*(event_type_history.end()));
 	}
 };
 

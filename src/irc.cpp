@@ -20,24 +20,34 @@
 **  If not, see <http://www.gnu.org/licenses/>.                           **
 ***************************************************************************/
 
+#include <cassert>
+
 #include "irc.hpp"
 
 slirc::irc::irc()
-: event_ready(event_ready_internal) {
+: event_available(event_available_internal) {
 	// The queue starts out empty.
-	event_ready_internal.close();
+	event_available_internal.close();
 }
 
 void slirc::irc::queue_event(event::pointer newevent) {
-	boost::mutex::scoped_lock lock(event_queue_mutex);
-	event_queue.push_back(newevent);
-	event_ready_internal.open();
+	if (newevent) {
+		boost::mutex::scoped_lock lock(event_queue_mutex);
+		std::weak_ptr<event> weakevent(newevent);
+		newevent->handle = [&,weakevent](){ handle(weakevent.lock()); };
+		event_queue.push_back(newevent);
+		event_available_internal.open();
+	}
 }
 
 void slirc::irc::queue_event_front(event::pointer newevent) {
-	boost::mutex::scoped_lock lock(event_queue_mutex);
-	event_queue.push_front(newevent);
-	event_ready_internal.open();
+	if (newevent) {
+		boost::mutex::scoped_lock lock(event_queue_mutex);
+		std::weak_ptr<event> weakevent;
+		newevent->handle = [&,weakevent](){ handle(weakevent.lock()); };
+		event_queue.push_front(newevent);
+		event_available_internal.open();
+	}
 }
 
 slirc::event::pointer slirc::irc::fetch_event() {
@@ -49,7 +59,23 @@ slirc::event::pointer slirc::irc::fetch_event() {
 	}
 	// no else!
 	if (event_queue.empty()) {
-		event_ready_internal.close();
+		event_available_internal.close();
 	}
 	return next;
+}
+
+void slirc::irc::handle(event::pointer pe) {
+	if (pe) {
+		while(pe->current_type != pe->event_type_history.end()) {
+			auto it = signals.find(*(pe->current_type));
+			if (signals.end() != it) {
+				assert(it->second.check &&
+					"Event check should have been set in attach handler.");
+				assert(it->second.check(*pe) &&
+					"Event does not have all required tags attached.");
+				it->second.signal(pe);
+			}
+			++(pe->current_type);
+		}
+	}
 }

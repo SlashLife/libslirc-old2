@@ -61,7 +61,7 @@ struct module;
  *       threaded environment.
  * \note On notable exception is the event queue API: Events can be added
  *       safely from any thread and will correctly unblock a worker thread
- *       waiting on event_ready.
+ *       waiting on event_available.
  */
 struct irc: private boost::noncopyable {
 private:
@@ -70,11 +70,11 @@ private:
 
 	boost::mutex event_queue_mutex;
 		std::deque<event::pointer> event_queue;
-		helper::waitable event_ready_internal;
+		helper::waitable event_available_internal;
 
 	struct signal_type {
 		boost::signals2::signal<void(event::pointer)> signal;
-		bool (*check)(event &);
+		bool (*check)(const event &);
 	};
 	std::map<std::type_index, signal_type> signals;
 
@@ -99,7 +99,7 @@ public:
 	 *       bad idea to have multiple threads concurrently wait for events on
 	 *       the same IRC context.)
 	 */
-	const helper::waitable &event_ready;
+	const helper::waitable &event_available;
 
 	/**
 	 * \brief Queue an event to the event queue.
@@ -126,7 +126,7 @@ public:
 	 *         available.
 	 *
 	 * \note This function does not block. If you want to wait for an event,
-	 *       try waiting on event_ready before fetching an event.
+	 *       try waiting on event_available before fetching an event.
 	 *
 	 * \note This function is thread safe.
 	 */
@@ -136,6 +136,51 @@ public:
 
 	///////////////////////////////////////////////////////////////////////////
 	// Event handler API
+
+	/**
+	 * \brief The callback type for event handlers.
+	 */
+	typedef std::function<void(event::pointer)> handler_type;
+
+	/**
+	 * \brief The type for handler connections.
+	 */
+	typedef boost::signals2::connection handler_connection_type;
+
+	/// \brief The queue in which handlers are executed.
+	enum class attach_queue: int {
+		prefilter = -0x10, ///< \brief The handler will be executed before all the main event handlers run.
+		handler = 0x00, ///< \brief The handler will be executed together with the main event handlers.
+		postfilter = 0x10 ///< \brief The handler will be executed after all main event handlers have run.
+	};
+
+	/**
+	 * \brief Attaches an event handler to a event type.
+	 *
+	 * \tparam EventType The event type to subscribe to.
+	 *
+	 * \param handler The handler that should be attached.
+	 * \param queue The queue in which the handler should be executed.
+	 *
+	 * \return The connection type of the attached handler.
+	 */
+	template<typename EventType>
+	handler_connection_type attach(handler_type handler, attach_queue queue = attach_queue::handler) {
+		signal_type &sig = signals[typeid(typename detail::event_type_check<EventType>::type)];
+		if (!sig.check) {
+			sig.check = &detail::event_type_check<EventType>::type::execution_checks::check;
+		}
+		return sig.signal.connect(static_cast<int>(queue), handler);
+	}
+
+	/**
+	 * \brief Handle an event.
+	 *
+	 * Takes an event and calls all handlers for it.
+	 *
+	 * \param pe A pointer to the event.
+	 */
+	void handle(event::pointer pe);
 
 
 
@@ -216,7 +261,8 @@ public:
 		}
 
 		Module *newmod = new Module(*this, std::forward<Params>(params)...);
-		modules[typeid(typename Module::module_api_type)] = module_container_t::mapped_type(newmod);
+		module_container_t::mapped_type wrapped_module(newmod);
+		modules[typeid(typename Module::module_api_type)] = std::move(wrapped_module);
 		return *newmod;
 	}
 };
