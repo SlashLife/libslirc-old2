@@ -108,7 +108,7 @@ public:
 	 * \note This type exists only for RTTI purposes and cannot be
 	 *       instantiated.
 	 */
-	typedef detail::event_type_base type;
+	struct type: detail::event_type_base {};
 
 	/**
 	 * \brief Base class for event type identifiers with required tags.
