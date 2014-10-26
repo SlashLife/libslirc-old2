@@ -35,9 +35,9 @@ namespace {
 slirc::modules::connection::connection(slirc::irc &context, const std::string &hostport)
 : apis::connection(context)
 , conn()
+, connstat(connection_status::disconnected)
 , hostname(hostport)
-, port(6667)
-, connstat(connection_status::disconnected) {
+, port(6667) {
 	if (hostname.substr(0, 6) == "irc://") {
 		hostname.erase(0, 6);
 	}
