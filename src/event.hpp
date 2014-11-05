@@ -113,11 +113,9 @@ public:
 	/**
 	 * \brief Base class for event type identifiers with required tags.
 	 *
-	 * Enables runtime checks for the given tag types when handling the event
-	 * using
 	 * If you define your own events, inherit from this class to allow them to
 	 * be used as an event type and to enable runtime checks for required
-	 * data tags in debug mode.
+	 * data tags in debug builds.
 	 *
 	 * \note This type exists only for RTTI purposes and cannot be
 	 *       instantiated.
