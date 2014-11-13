@@ -76,6 +76,10 @@ namespace detail {
 		, status_handler([](const boost::system::error_code &){})
 		, recv_handler([](const std::string &){})
 		, send_handler([](std::size_t){})
+		, recv_buffer()
+#ifndef LIBSLIRC_OPTION_WITHOUT_SSL
+		, ssl_context(nullptr)
+#endif
 		{}
 
 		~connection_implementation() {
