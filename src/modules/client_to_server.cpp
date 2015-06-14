@@ -99,6 +99,22 @@ void slirc::modules::client_to_server::parser(event::pointer ep) {
 				}
 				ep->queue_as<quit_event>();
 			}
+			else if (prm.params.size() < 4) break;
+			else if (
+				prm.params[1] == "NOTICE" ||
+				prm.params[1] == "PRIVMSG"
+			) {
+				recipient &rcp = ep->data.set(recipient());
+					rcp.recipient_string = prm.params[2];
+				// TODO: CTCPs
+				message &msg = ep->data.set(message());
+					msg.type = prm.params[1][0] == 'P'
+						? message::privmsg
+						: message::notice;
+					msg.raw = prm[3];
+
+				ep->queue_as<message_event>();
+			}
 		}
 		else {
 			// Check for commands ... well ... at least for what we know:
